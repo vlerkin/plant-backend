@@ -49,7 +49,7 @@ class Plant(Base):
 
     waterLogs: Mapped[List["WaterLog"]] = relationship("plant", cascade="all, delete-orphan")
     fertilizerLogs: Mapped[List["FertilizerLog"]] = relationship("plant", cascade="all, delete-orphan")
-    diseases: Mapped[List["PlantDisease"]]
+    diseases: Mapped[List["PlantDisease"]] = relationship()
 
     @property
     def isHealthy(self):
