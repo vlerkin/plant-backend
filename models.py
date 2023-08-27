@@ -18,6 +18,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(100))
     photo: Mapped[Optional[str]]
 
+    plants: Mapped[List["Plant"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     accessTokens: Mapped[List["AccessToken"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
@@ -26,10 +27,10 @@ class AccessToken(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     token: Mapped[str] = mapped_column(String(36))
-    nameToken: Mapped[str] = mapped_column(String(100))
-    startDate: Mapped[datetime]
-    endDate: Mapped[datetime]
-    userId: Mapped[int] = mapped_column(ForeignKey("user_account.id"))
+    nameToken: Mapped[str] = mapped_column("name_token", String(100))
+    startDate: Mapped[datetime] = mapped_column("start_date")
+    endDate: Mapped[datetime] = mapped_column("end_date")
+    userId: Mapped[int] = mapped_column("user_id", ForeignKey("user_account.id"))
 
     user: Mapped["User"] = relationship(back_populates="accessTokens")
 
@@ -40,15 +41,17 @@ class Plant(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     photo: Mapped[Optional[str]]
     name: Mapped[str] = mapped_column(String(100))
-    howOftenWatering: Mapped[int]
-    waterVolume: Mapped[float]
+    howOftenWatering: Mapped[int] = mapped_column("how_often_watering")
+    waterVolume: Mapped[float] = mapped_column("water_volume")
     light: Mapped[str]
     location: Mapped[Optional[str]]
     comment: Mapped[Optional[str]]
     species: Mapped[Optional[str]]
+    userId: Mapped[int] = mapped_column("user_id", ForeignKey("user_account.id"))
 
-    waterLogs: Mapped[List["WaterLog"]] = relationship("plant", cascade="all, delete-orphan")
-    fertilizerLogs: Mapped[List["FertilizerLog"]] = relationship("plant", cascade="all, delete-orphan")
+    user: Mapped["User"] = relationship(back_populates="plants")
+    waterLogs: Mapped[List["WaterLog"]] = relationship(cascade="all, delete-orphan", back_populates="plant")
+    fertilizerLogs: Mapped[List["FertilizerLog"]] = relationship(cascade="all, delete-orphan", back_populates="plant")
     diseases: Mapped[List["PlantDisease"]] = relationship()
 
     @property
@@ -65,9 +68,9 @@ class WaterLog(Base):
     __tablename__ = "water_log"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    dateTime: Mapped[datetime]
-    waterVolume: Mapped[float]
-    plantId: Mapped[int] = mapped_column(ForeignKey("plant.id"))
+    dateTime: Mapped[datetime] = mapped_column("date_time")
+    waterVolume: Mapped[float] = mapped_column("water_volume")
+    plantId: Mapped[int] = mapped_column("plant_id", ForeignKey("plant.id"))
 
     plant: Mapped["Plant"] = relationship(back_populates="waterLogs")
 
@@ -78,8 +81,8 @@ class FertilizerLog(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     type: Mapped[str]
     quantity: Mapped[float]
-    dateTime: Mapped[datetime]
-    plantId: Mapped[int] = mapped_column(ForeignKey("plant.id"))
+    dateTime: Mapped[datetime] = mapped_column("date_time")
+    plantId: Mapped[int] = mapped_column("plant_id", ForeignKey("plant.id"))
 
     plant: Mapped["Plant"] = relationship(back_populates="fertilizerLogs")
 
@@ -94,9 +97,9 @@ class Disease(Base):
 class PlantDisease(Base):
     __tablename__ = "plant_disease"
 
-    plantId: Mapped[int] = mapped_column(ForeignKey("plant.id"), primary_key=True)
-    diseaseId: Mapped[int] = mapped_column(ForeignKey("disease.id"), primary_key=True)
-    startDate: Mapped[Optional[datetime]]
-    endDate: Mapped[Optional[datetime]]
+    plantId: Mapped[int] = mapped_column("plant_id", ForeignKey("plant.id"), primary_key=True)
+    diseaseId: Mapped[int] = mapped_column("disease_id", ForeignKey("disease.id"), primary_key=True)
+    startDate: Mapped[Optional[datetime]] = mapped_column("start_date")
+    endDate: Mapped[Optional[datetime]] = mapped_column("end_date")
     treatment: Mapped[Optional[str]]
     comment: Mapped[Optional[str]]
