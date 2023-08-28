@@ -66,12 +66,24 @@ async def get_plant(plant_id: int):
     user_id = 1
     thirty_days_ago = datetime.now() - timedelta(days=30)
     ninety_days_ago = datetime.now() - timedelta(days=90)
-    plant_of_user = session.query(Plant).filter_by(userId=user_id, id=plant_id).first()
+    plant_of_user = session.query(Plant).filter_by(userId=user_id, id=plant_id).one()
     plant_watering = session.query(WaterLog).filter(WaterLog.plantId == plant_id, WaterLog.dateTime >= thirty_days_ago).all()
     plant_fertilizing = session.query(FertilizerLog).filter(FertilizerLog.plantId == plant_id, FertilizerLog.dateTime >= thirty_days_ago).all()
     plant_disease = session.query(PlantDisease).filter(PlantDisease.plantId == plant_id, PlantDisease.startDate >= ninety_days_ago).order_by(desc(PlantDisease.endDate)).all()
     if not plant_of_user:
-        session.close()
+
         raise HTTPException(status_code=404, detail="Plant not found")
     return {"info": plant_of_user, "watering_log": plant_watering, "fertilizing_log": plant_fertilizing, "disease_log": plant_disease}
-    session.close()
+
+
+# delete a plant
+@app.delete("/my-plants/{plant_id}")
+async def delete_plant(plant_id: int):
+    user_id = 1
+    plant_to_delete = session.query(Plant).filter(Plant.userId==user_id, Plant.id==plant_id).one()
+    if not plant_to_delete:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    session.delete(plant_to_delete)
+    session.commit()
+
+    return {"message": "Plant deleted"}
