@@ -1,11 +1,12 @@
+from datetime import datetime, timedelta
 from pprint import pprint
 
 from fastapi import FastAPI, HTTPException
 from pydantic import ValidationError
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-from models import User, Plant
+from sqlalchemy import create_engine, desc
+from sqlalchemy.orm import Session, joinedload
+from models import User, Plant, WaterLog, FertilizerLog, PlantDisease
 from interfaces import NewUser
 from passlib.context import CryptContext
 
@@ -50,9 +51,27 @@ async def create_new_user(new_user: NewUser):
         session.close()
 
 
+# get user's plants
 @app.get("/my-plants")
 async def show_my_plants():
     user_id = 1
-    user_plants = session.query(Plant).filter_by(userId=user_id).all()
+    user_plants = (session.query(Plant).filter_by(userId=user_id).all())
     return user_plants
+    session.close()
+
+
+# get a plant's info
+@app.get("/my-plants/{plant_id}")
+async def get_plant(plant_id: int):
+    user_id = 1
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    ninety_days_ago = datetime.now() - timedelta(days=90)
+    plant_of_user = session.query(Plant).filter_by(userId=user_id, id=plant_id).first()
+    plant_watering = session.query(WaterLog).filter(WaterLog.plantId == plant_id, WaterLog.dateTime >= thirty_days_ago).all()
+    plant_fertilizing = session.query(FertilizerLog).filter(FertilizerLog.plantId == plant_id, FertilizerLog.dateTime >= thirty_days_ago).all()
+    plant_disease = session.query(PlantDisease).filter(PlantDisease.plantId == plant_id, PlantDisease.startDate >= ninety_days_ago).order_by(desc(PlantDisease.endDate)).all()
+    if not plant_of_user:
+        session.close()
+        raise HTTPException(status_code=404, detail="Plant not found")
+    return {"info": plant_of_user, "watering_log": plant_watering, "fertilizing_log": plant_fertilizing, "disease_log": plant_disease}
     session.close()
