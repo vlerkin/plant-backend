@@ -55,13 +55,21 @@ class Plant(Base):
     diseases: Mapped[List["PlantDisease"]] = relationship()
 
     @property
-    def isHealthy(self):
+    def is_healthy(self):
         # todo: compute by PlantDisease data
         today = datetime.now()
         for disease in self.diseases:
             if disease.endDate is None or disease.endDate > today:
                 return False
         return True
+
+    @property
+    def time_to_water(self):
+        today = datetime.now()
+        for watering in self.waterLogs:
+            if watering.dateTime - today >= self.howOftenWatering:
+                return True
+        return False
 
 
 class WaterLog(Base):
