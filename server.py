@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from models import User
+from models import User, Plant
 from interfaces import NewUser
 from passlib.context import CryptContext
 
@@ -32,7 +32,7 @@ async def root():
 
 # register a new user
 @app.post("/register")
-async def root(new_user: NewUser):
+async def create_new_user(new_user: NewUser):
     password = get_password_hash(new_user.password)
     try:
         db_new_user = User(
@@ -50,3 +50,9 @@ async def root(new_user: NewUser):
         session.close()
 
 
+@app.get("/my-plants")
+async def show_my_plants():
+    user_id = 1
+    user_plants = session.query(Plant).filter_by(userId=user_id).all()
+    return user_plants
+    session.close()
