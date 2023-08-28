@@ -7,12 +7,24 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from models import User
 from interfaces import NewUser
+from passlib.context import CryptContext
 
 app = FastAPI()
 engine = create_engine("postgresql://test@localhost:5432/test", echo=True)
 session = Session(engine)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+# password verification and hashing
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+# API
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
@@ -21,10 +33,11 @@ async def root():
 # register a new user
 @app.post("/register")
 async def root(new_user: NewUser):
+    password = get_password_hash(new_user.password)
     try:
         db_new_user = User(
             name=new_user.name,
-            password=new_user.password,
+            password=password,
             email=new_user.email,
         )
         session.add(db_new_user)
