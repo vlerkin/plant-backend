@@ -17,3 +17,7 @@ class PlantUpdate(BaseModel):
     waterVolume: float = Field(..., gt=0)
     light: constr(strict=True)
 
+
+class LoginUser(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=10)
