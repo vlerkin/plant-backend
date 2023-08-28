@@ -1,8 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from config import Configuration
 from models import Base, User, Plant
 
-engine = create_engine("postgresql://test@localhost:5432/test", echo=True)
+engine = create_engine(Configuration.connectionString, echo=True)
 Base.metadata.create_all(engine)
 
 with Session(engine) as session:

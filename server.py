@@ -6,23 +6,17 @@ from pydantic import ValidationError
 
 from sqlalchemy import create_engine, desc
 from sqlalchemy.orm import Session, joinedload
+
+from auth import get_password_hash
+from config import Configuration
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease
 from interfaces import NewUser
-from passlib.context import CryptContext
+
 
 app = FastAPI()
-engine = create_engine("postgresql://test@localhost:5432/test", echo=True)
+engine = create_engine(Configuration.connectionString, echo=True)
 session = Session(engine)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-
-# password verification and hashing
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
 
 
 # API
@@ -47,8 +41,6 @@ async def create_new_user(new_user: NewUser):
         return new_user
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
-    finally:
-        session.close()
 
 
 # get user's plants
@@ -57,7 +49,6 @@ async def show_my_plants():
     user_id = 1
     user_plants = (session.query(Plant).filter_by(userId=user_id).all())
     return user_plants
-    session.close()
 
 
 # get a plant's info
@@ -80,10 +71,14 @@ async def get_plant(plant_id: int):
 @app.delete("/my-plants/{plant_id}")
 async def delete_plant(plant_id: int):
     user_id = 1
-    plant_to_delete = session.query(Plant).filter(Plant.userId==user_id, Plant.id==plant_id).one()
+    plant_to_delete = session.query(Plant).filter(Plant.userId == user_id, Plant.id == plant_id).one()
     if not plant_to_delete:
         raise HTTPException(status_code=404, detail="Plant not found")
     session.delete(plant_to_delete)
     session.commit()
-
     return {"message": "Plant deleted"}
+
+
+@app.patch("/my-plants/{plant_id}")
+async def update_plant(plant_id: int, plant_info):
+    user_id = 1

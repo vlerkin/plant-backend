@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, constr
 
 
 class NewUser(BaseModel):
@@ -9,4 +9,11 @@ class NewUser(BaseModel):
 
 class ErrorMessage(BaseModel):
     message: str
+
+
+class PlantUpdate(BaseModel):
+    name: str
+    howOftenWatering: int = Field(..., gt=0)
+    waterVolume: float = Field(..., gt=0)
+    light: constr(strict=True)
 
