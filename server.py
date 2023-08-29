@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from auth import get_password_hash, oauth2_scheme, get_user, authenticate_user, create_access_token
 from config import Configuration
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease
-from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate
+from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate, UserUpdate
 from typing import Annotated, List
 
 app = FastAPI()
@@ -112,6 +112,34 @@ async def show_me(user: User = Depends(get_current_user)):
     return user
 
 
+@app.patch("/me")
+async def edit_profile(user_info: UserUpdate, user: User = Depends(get_current_user)):
+    user_id = user.id
+    user_to_update = session.query(User).filter_by(id=user_id).one()
+    if not user_to_update:
+        raise HTTPException(status_code=404, detail="User not found")
+    # if user provided new password, check it and hash before updating
+    if user_info.password and get_password_hash(user_info.password) != user_to_update.password:
+        hashed_password = get_password_hash(user_info.password)
+        user_update = {User.name: user_info.name,
+                       User.email: user_info.email,
+                       User.photo: user_info.photo,
+                       User.password: hashed_password
+                       }
+        session.execute(update(User).where(User.id == user_id).values(user_update))
+        session.commit()
+        return {"message": "user updated"}
+    # if user did not provide a new password update user with the existing one
+    else:
+        user_update = {User.name: user_info.name,
+                       User.email: user_info.email,
+                       User.photo: user_info.photo,
+                       User.password: user_to_update.password}
+        session.execute(update(User).where(User.id == user_id).values(user_update))
+        session.commit()
+        return {"message": "user updated"}
+
+
 # get a plant's info
 @app.get("/my-plants/{plant_id}")
 async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
@@ -123,7 +151,6 @@ async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
     plant_fertilizing = session.query(FertilizerLog).filter(FertilizerLog.plantId == plant_id, FertilizerLog.dateTime >= thirty_days_ago).all()
     plant_disease = session.query(PlantDisease).filter(PlantDisease.plantId == plant_id, PlantDisease.startDate >= ninety_days_ago).order_by(desc(PlantDisease.endDate)).all()
     if not plant_of_user:
-
         raise HTTPException(status_code=404, detail="Plant not found")
     return {"info": plant_of_user, "watering_log": plant_watering, "fertilizing_log": plant_fertilizing, "disease_log": plant_disease}
 
@@ -160,7 +187,6 @@ async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depe
                     Plant.comment: plant_info.comment,
                     Plant.species: plant_info.species,
                     Plant.userId: user_id}
-    print(plant_update)
     session.execute(update(Plant).where(Plant.id == plant_id).values(plant_update))
     session.commit()
     return {"message": "plant updated"}

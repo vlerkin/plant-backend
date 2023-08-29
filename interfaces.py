@@ -63,3 +63,10 @@ class MyPlants(BaseModel):
     userId: int
     is_healthy: bool
     time_to_water: bool
+
+
+class UserUpdate(BaseModel):
+    email: EmailStr
+    password: str | None
+    name: str = Field(..., max_length=100)
+    photo: str | None
