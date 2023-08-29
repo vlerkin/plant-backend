@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from auth import get_password_hash, oauth2_scheme, get_user, authenticate_user, create_access_token
 from config import Configuration
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease
-from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate, UserUpdate
+from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate, UserUpdate, CreateFertilizing
 from typing import Annotated, List
 
 app = FastAPI()
@@ -206,6 +206,7 @@ async def create_watering(plant_id: int, user: User = Depends(get_current_user))
         raise HTTPException(status_code=404, detail="Plant not found")
     if plant_to_update.userId != user_id:
         raise HTTPException(status_code=401, detail="You are not authorized")
+
     try:
         db_new_watering = WaterLog(dateTime=datetime.now(),
                                    waterVolume=plant_to_update.waterVolume,
@@ -217,3 +218,22 @@ async def create_watering(plant_id: int, user: User = Depends(get_current_user))
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@app.post("/my-plants/{plant_id}/fertilizing")
+async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing, user: User = Depends(get_current_user)):
+    user_id = user.id
+    # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
+    plant_to_update = session.query(Plant).filter_by(id=plant_id).one()
+    if not plant_to_update:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    if plant_to_update.userId != user_id:
+        raise HTTPException(status_code=401, detail="You are not authorized")
+    try:
+        db_new_fertilizing = FertilizerLog(dateTime=datetime.now(),
+                                           quantity=fertilizing_info.quantity,
+                                           type=fertilizing_info.type,
+                                           plantId=plant_to_update.id)
+        session.add(db_new_fertilizing)
+        session.commit()
+        return {"message": "added fertilizing to log"}
+    except ValidationError as error:
+        raise HTTPException(status_code=400, detail=str(error))

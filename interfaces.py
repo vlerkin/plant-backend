@@ -70,3 +70,8 @@ class UserUpdate(BaseModel):
     password: str | None
     name: str = Field(..., max_length=100)
     photo: str | None
+
+
+class CreateFertilizing(BaseModel):
+    type: str = Field(..., max_length=300)
+    quantity: float
