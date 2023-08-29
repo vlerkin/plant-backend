@@ -90,10 +90,11 @@ async def show_my_plants(user: User = Depends(get_current_user)):
 async def show_me(user: User = Depends(get_current_user)):
     return user
 
+
 # get a plant's info
 @app.get("/my-plants/{plant_id}")
-async def get_plant(plant_id: int):
-    user_id = 1
+async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
+    user_id = user.id
     thirty_days_ago = datetime.now() - timedelta(days=30)
     ninety_days_ago = datetime.now() - timedelta(days=90)
     plant_of_user = session.query(Plant).filter_by(userId=user_id, id=plant_id).one()
@@ -108,8 +109,8 @@ async def get_plant(plant_id: int):
 
 # delete a plant
 @app.delete("/my-plants/{plant_id}")
-async def delete_plant(plant_id: int):
-    user_id = 1
+async def delete_plant(plant_id: int, user: User = Depends(get_current_user)):
+    user_id = user.id
     plant_to_delete = session.query(Plant).filter(Plant.userId == user_id, Plant.id == plant_id).one()
     if not plant_to_delete:
         raise HTTPException(status_code=404, detail="Plant not found")
