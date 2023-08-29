@@ -116,14 +116,19 @@ async def show_me(user: User = Depends(get_current_user)):
 async def edit_profile(user_info: UserUpdate, user: User = Depends(get_current_user)):
     user_id = user.id
     user_to_update = session.query(User).filter_by(id=user_id).one()
+    # take existing photo
+    photo = user.photo
     if not user_to_update:
         raise HTTPException(status_code=404, detail="User not found")
+    # if user provided new photo, update photo variable to use for patching
+    if user_info.photo:
+        photo = user_info.photo
     # if user provided new password, check it and hash before updating
     if user_info.password and get_password_hash(user_info.password) != user_to_update.password:
         hashed_password = get_password_hash(user_info.password)
         user_update = {User.name: user_info.name,
                        User.email: user_info.email,
-                       User.photo: user_info.photo,
+                       User.photo: photo,
                        User.password: hashed_password
                        }
         session.execute(update(User).where(User.id == user_id).values(user_update))
@@ -133,7 +138,7 @@ async def edit_profile(user_info: UserUpdate, user: User = Depends(get_current_u
     else:
         user_update = {User.name: user_info.name,
                        User.email: user_info.email,
-                       User.photo: user_info.photo,
+                       User.photo: photo,
                        User.password: user_to_update.password}
         session.execute(update(User).where(User.id == user_id).values(user_update))
         session.commit()
@@ -190,5 +195,25 @@ async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depe
     session.execute(update(Plant).where(Plant.id == plant_id).values(plant_update))
     session.commit()
     return {"message": "plant updated"}
+
+
+@app.post("/my-plants/{plant_id}/watering")
+async def create_watering(plant_id: int, user: User = Depends(get_current_user)):
+    user_id = user.id
+    # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
+    plant_to_update = session.query(Plant).filter_by(id=plant_id).one()
+    if not plant_to_update:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    if plant_to_update.userId != user_id:
+        raise HTTPException(status_code=401, detail="You are not authorized")
+    try:
+        db_new_watering = WaterLog(dateTime=datetime.now(),
+                                   waterVolume=plant_to_update.waterVolume,
+                                   plantId=plant_to_update.id)
+        session.add(db_new_watering)
+        session.commit()
+        return {"message": "plant watered"}
+    except ValidationError as error:
+        raise HTTPException(status_code=400, detail=str(error))
 
 
