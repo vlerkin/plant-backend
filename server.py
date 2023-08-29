@@ -5,13 +5,13 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from jose import jwt, JWTError
 from pydantic import ValidationError
 
-from sqlalchemy import create_engine, desc
+from sqlalchemy import create_engine, desc, update
 from sqlalchemy.orm import Session
 
 from auth import get_password_hash, oauth2_scheme, get_user, authenticate_user, create_access_token
 from config import Configuration
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease
-from interfaces import NewUser, LoginUser, UserProfile, MyPlants
+from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate
 from typing import Annotated, List
 
 app = FastAPI()
@@ -120,5 +120,26 @@ async def delete_plant(plant_id: int, user: User = Depends(get_current_user)):
 
 
 @app.patch("/my-plants/{plant_id}")
-async def update_plant(plant_id: int, plant_info):
-    user_id = 1
+async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depends(get_current_user)):
+    # get user id from auth to add it later to a plant info to update a plant
+    user_id = user.id
+    # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
+    plant_to_update = session.query(Plant).filter_by(id=plant_id).one()
+    if not plant_to_update:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    if plant_to_update.userId != user_id:
+        raise HTTPException(status_code=401, detail="You are not authorized")
+    
+    plant_update = {Plant.name: plant_info.name,
+                    Plant.howOftenWatering: int(plant_info.howOftenWatering),
+                    Plant.waterVolume: float(plant_info.waterVolume),
+                    Plant.light: plant_info.light,
+                    Plant.location: plant_info.location,
+                    Plant.photo: plant_info.photo,
+                    Plant.comment: plant_info.comment,
+                    Plant.species: plant_info.species,
+                    Plant.userId: user_id}
+    print(plant_update)
+    session.execute(update(Plant).where(Plant.id == plant_id).values(plant_update))
+    session.commit()
+    return {"message": "plant updated"}

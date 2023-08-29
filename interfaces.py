@@ -1,3 +1,5 @@
+from enum import Enum
+
 from pydantic import BaseModel, Field, EmailStr, constr
 
 
@@ -11,11 +13,30 @@ class ErrorMessage(BaseModel):
     message: str
 
 
+class LightEnum(str, Enum):
+    full_sun = "full sun"
+    part_shadow = "partial shadow"
+    full_shadow = "full shadow"
+
+
+class LocationEnum(str, Enum):
+    south = "south"
+    north = "north"
+    south_east = "south_east"
+    south_west = "south_west"
+    north_east = "north_east"
+    north_west = "north_west"
+
+
 class PlantUpdate(BaseModel):
-    name: str
+    name: str = Field(..., max_length=100)
     howOftenWatering: int = Field(..., gt=0)
     waterVolume: float = Field(..., gt=0)
-    light: constr(strict=True)
+    light: LightEnum
+    location: LocationEnum | None
+    photo: str | None
+    comment: str | None
+    species: str | None
 
 
 class LoginUser(BaseModel):
