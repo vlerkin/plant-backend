@@ -85,6 +85,27 @@ async def show_my_plants(user: User = Depends(get_current_user)):
     return user_plants
 
 
+# create a plant
+@app.post("/my-plants")
+async def create_plant(new_plant: PlantUpdate, user: User = Depends(get_current_user)):
+    user_id = user.id
+    try:
+        db_new_plant = Plant(name=new_plant.name,
+                             photo=new_plant.photo,
+                             howOftenWatering=new_plant.howOftenWatering,
+                             waterVolume=new_plant.waterVolume,
+                             light=new_plant.light,
+                             location=new_plant.location,
+                             comment=new_plant.comment,
+                             species=new_plant.species,
+                             userId=user_id)
+        session.add(db_new_plant)
+        session.commit()
+        return new_plant
+    except ValidationError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
 # get user profile
 @app.get("/me", response_model=UserProfile)
 async def show_me(user: User = Depends(get_current_user)):
@@ -129,7 +150,7 @@ async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depe
         raise HTTPException(status_code=404, detail="Plant not found")
     if plant_to_update.userId != user_id:
         raise HTTPException(status_code=401, detail="You are not authorized")
-    
+
     plant_update = {Plant.name: plant_info.name,
                     Plant.howOftenWatering: int(plant_info.howOftenWatering),
                     Plant.waterVolume: float(plant_info.waterVolume),
@@ -143,3 +164,5 @@ async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depe
     session.execute(update(Plant).where(Plant.id == plant_id).values(plant_update))
     session.commit()
     return {"message": "plant updated"}
+
+

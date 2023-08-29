@@ -63,5 +63,3 @@ class MyPlants(BaseModel):
     userId: int
     is_healthy: bool
     time_to_water: bool
-
-
