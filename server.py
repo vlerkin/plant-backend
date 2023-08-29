@@ -11,9 +11,8 @@ from sqlalchemy.orm import Session
 from auth import get_password_hash, oauth2_scheme, get_user, authenticate_user, create_access_token
 from config import Configuration
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease
-from interfaces import NewUser, LoginUser
-from typing import Annotated
-
+from interfaces import NewUser, LoginUser, UserProfile, MyPlants
+from typing import Annotated, List
 
 app = FastAPI()
 engine = create_engine(Configuration.connectionString, echo=True)
@@ -80,11 +79,16 @@ async def login_user(user_to_login: LoginUser):
 
 
 # get user's plants
-@app.get("/my-plants")
-async def show_my_plants(user: Annotated[User, Depends(get_current_user)]):
+@app.get("/my-plants", response_model=List[MyPlants])
+async def show_my_plants(user: User = Depends(get_current_user)):
     user_plants = (session.query(Plant).filter_by(userId=user.id).all())
     return user_plants
 
+
+# get user profile
+@app.get("/me", response_model=UserProfile)
+async def show_me(user: User = Depends(get_current_user)):
+    return user
 
 # get a plant's info
 @app.get("/my-plants/{plant_id}")

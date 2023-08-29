@@ -21,3 +21,26 @@ class PlantUpdate(BaseModel):
 class LoginUser(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=10)
+
+
+class UserProfile(BaseModel):
+    name: str
+    email: str
+    photo: str | None
+
+
+class MyPlants(BaseModel):
+    id: int
+    name: str
+    howOftenWatering: int
+    location: str | None
+    species: str | None
+    photo: str | None
+    waterVolume: float
+    light: str
+    comment: str | None
+    userId: int
+    is_healthy: bool
+    time_to_water: bool
+
+
