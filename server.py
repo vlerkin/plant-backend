@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from pprint import pprint
 
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from jose import jwt, JWTError
 from pydantic import ValidationError
 
@@ -17,7 +18,18 @@ from typing import Annotated, List
 app = FastAPI()
 engine = create_engine(Configuration.connectionString, echo=True)
 session = Session(engine)
+origins = [
+    "http://localhost:3000",
+    "http://localhost:8000"
+]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
