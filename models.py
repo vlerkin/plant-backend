@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 
 from sqlalchemy import String, ForeignKey
@@ -57,9 +57,9 @@ class Plant(Base):
     @property
     def is_healthy(self):
         # todo: compute by PlantDisease data
-        today = datetime.now()
+        yesterday = datetime.now() - timedelta(days=1)
         for disease in self.diseases:
-            if disease.endDate is None or disease.endDate > today:
+            if disease.endDate is None or disease.endDate >= yesterday:
                 return False
         return True
 
@@ -67,7 +67,8 @@ class Plant(Base):
     def time_to_water(self):
         today = datetime.now()
         for watering in self.waterLogs:
-            if watering.dateTime - today >= self.howOftenWatering:
+            difference_in_days = (today - watering.dateTime).days
+            if difference_in_days >= self.howOftenWatering:
                 return True
         return False
 

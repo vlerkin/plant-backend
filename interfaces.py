@@ -64,8 +64,8 @@ class MyPlants(BaseModel):
     light: str
     comment: str | None
     userId: int
-    is_healthy: bool
-    time_to_water: bool
+    is_healthy: bool | None
+    time_to_water: bool | None
 
 
 class UserUpdate(BaseModel):
