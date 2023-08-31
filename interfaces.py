@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field, EmailStr, constr
@@ -22,6 +23,8 @@ class LightEnum(str, Enum):
 class LocationEnum(str, Enum):
     south = "south"
     north = "north"
+    east = "east"
+    west = "west"
     south_east = "south_east"
     south_west = "south_west"
     north_east = "north_east"
@@ -75,3 +78,12 @@ class UserUpdate(BaseModel):
 class CreateFertilizing(BaseModel):
     type: str = Field(..., max_length=300)
     quantity: float
+
+
+class PlantDiseaseCreate(BaseModel):
+    diseaseId: int
+    startDate: datetime
+    endDate: datetime
+    treatment: str | None
+    comment: str | None
+

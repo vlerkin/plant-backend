@@ -105,8 +105,9 @@ class Disease(Base):
 class PlantDisease(Base):
     __tablename__ = "plant_disease"
 
-    plantId: Mapped[int] = mapped_column("plant_id", ForeignKey("plant.id"), primary_key=True)
-    diseaseId: Mapped[int] = mapped_column("disease_id", ForeignKey("disease.id"), primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    plantId: Mapped[int] = mapped_column("plant_id", ForeignKey("plant.id"))
+    diseaseId: Mapped[int] = mapped_column("disease_id", ForeignKey("disease.id"))
     startDate: Mapped[Optional[datetime]] = mapped_column("start_date")
     endDate: Mapped[Optional[datetime]] = mapped_column("end_date")
     treatment: Mapped[Optional[str]]

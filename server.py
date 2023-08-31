@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session
 
 from auth import get_password_hash, oauth2_scheme, get_user, authenticate_user, create_access_token
 from config import Configuration
-from models import User, Plant, WaterLog, FertilizerLog, PlantDisease
-from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate, UserUpdate, CreateFertilizing
+from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease
+from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate, UserUpdate, CreateFertilizing, \
+    PlantDiseaseCreate
 from typing import Annotated, List
 
 app = FastAPI()
@@ -194,15 +195,26 @@ async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depe
         raise HTTPException(status_code=404, detail="Plant not found")
     if plant_to_update.userId != user_id:
         raise HTTPException(status_code=401, detail="You are not authorized")
-
+    location = plant_to_update.location
+    photo = plant_to_update.photo
+    comment = plant_to_update.comment
+    species = plant_to_update.species
+    if plant_info.location:
+        location = plant_info.location
+    if plant_info.photo:
+        photo = plant_info.photo
+    if plant_info.comment:
+        comment = plant_info.comment
+    if plant_info.species:
+        species = plant_info.species
     plant_update = {Plant.name: plant_info.name,
                     Plant.howOftenWatering: int(plant_info.howOftenWatering),
                     Plant.waterVolume: float(plant_info.waterVolume),
                     Plant.light: plant_info.light,
-                    Plant.location: plant_info.location,
-                    Plant.photo: plant_info.photo,
-                    Plant.comment: plant_info.comment,
-                    Plant.species: plant_info.species,
+                    Plant.location: location,
+                    Plant.photo: photo,
+                    Plant.comment: comment,
+                    Plant.species: species,
                     Plant.userId: user_id}
     session.execute(update(Plant).where(Plant.id == plant_id).values(plant_update))
     session.commit()
@@ -249,3 +261,45 @@ async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing,
         return {"message": "added fertilizing to log"}
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.post("/my-plants/{plant_id}/plant-disease")
+async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, user: User = Depends(get_current_user)):
+    user_id = user.id
+    # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
+    plant_to_update = session.query(Plant).filter_by(id=plant_id).one()
+    if not plant_to_update:
+        raise HTTPException(status_code=404, detail="Plant not found")
+    if plant_to_update.userId != user_id:
+        raise HTTPException(status_code=401, detail="You are not authorized")
+    # check if requested disease with the provided id exists
+    requested_disease = session.query(Disease).filter_by(id=disease_info.diseaseId).one()
+    if not requested_disease:
+        raise HTTPException(status_code=404, detail="Disease not found")
+    # check if user has created the same plant_disease for the past day for the same plant and disease
+    yesterday = datetime.now() - timedelta(days=1)
+    plant_disease = session.query(PlantDisease).filter(PlantDisease.plantId == plant_id,
+                                                       PlantDisease.diseaseId == disease_info.diseaseId,
+                                                       PlantDisease.startDate == disease_info.startDate,
+                                                       PlantDisease.endDate >= yesterday).all()
+    if plant_disease:
+        print("You already added this disease")
+        return None
+    try:
+        db_new_plant_disease = PlantDisease(plantId=plant_id,
+                                            diseaseId=disease_info.diseaseId,
+                                            startDate=disease_info.startDate,
+                                            endDate=disease_info.endDate,
+                                            treatment=disease_info.treatment,
+                                            comment=disease_info.comment)
+        session.add(db_new_plant_disease)
+        session.commit()
+        return disease_info
+    except ValidationError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.get("/all-diseases")
+async def all_diseases():
+    diseases = session.query(Disease).all()
+    return diseases
