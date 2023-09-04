@@ -1,6 +1,9 @@
+import random
+import uuid
 from datetime import datetime, timedelta
 from pprint import pprint
 
+import boto3
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, Form, File
 from fastapi.middleware.cors import CORSMiddleware
 from jose import jwt, JWTError
@@ -17,7 +20,7 @@ from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate, U
 from typing import Annotated, List
 
 app = FastAPI()
-engine = create_engine(Configuration.connectionString, echo=True)
+engine = create_engine(Configuration.connection_string, echo=True)
 session = Session(engine)
 origins = [
     "http://localhost:3000",
@@ -32,6 +35,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+s3 = boto3.client(
+    "s3",
+    aws_access_key_id=Configuration.aws_access_key_id,
+    aws_secret_access_key=Configuration.aws_secret_access_key,
+    region_name=Configuration.aws_region_name
+)
+
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -39,7 +49,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, Configuration.secretKey, algorithms=[Configuration.algorithm])
+        payload = jwt.decode(token, Configuration.secret_key, algorithms=[Configuration.algorithm])
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
@@ -118,8 +128,14 @@ async def create_plant(new_plant: PlantUpdate, user: User = Depends(get_current_
         raise HTTPException(status_code=400, detail=str(error))
 
 
-@app.post("/upload")
-async def upload_photo(file: UploadFile, user: User = Depends(get_current_user)):
+@app.post("/upload/{category}")
+async def upload_photo(file: UploadFile, category: str, user: User = Depends(get_current_user)):
+    to_show = s3.upload_fileobj(
+        file.file,
+        Configuration.aws_bucket_name,
+        str(user.id) + "/" + category + "/" + file.filename.lower()
+    )
+    print(to_show)
     return {'filename': file.filename, 'user_id': user.id}
 
 

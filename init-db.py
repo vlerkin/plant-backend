@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from config import Configuration
 from models import Base, User, Plant
 
-engine = create_engine(Configuration.connectionString, echo=True)
+engine = create_engine(Configuration.connection_string, echo=True)
 Base.metadata.create_all(engine)
 
 with Session(engine) as session:

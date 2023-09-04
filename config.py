@@ -6,8 +6,12 @@ load_dotenv(".env.local")
 
 
 class Configuration:
-    connectionString: str = os.getenv('DATABASE_CONNECTION_STRING')
+    connection_string: str = os.getenv('DATABASE_CONNECTION_STRING')
 
-    secretKey: str = os.getenv('SECRET_KEY')
+    secret_key: str = os.getenv('SECRET_KEY')
     algorithm: str = os.getenv('ALGORITHM')
-    tokenExpireDays: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_DAYS"))
+    token_expire_days: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_DAYS"))
+    aws_access_key_id: str = os.getenv("AWS_ACCESS_KEY")
+    aws_secret_access_key: str = os.getenv("AWS_SECRET")
+    aws_region_name: str = os.getenv("AWS_REGION")
+    aws_bucket_name: str = os.getenv("AWS_BUCKET_NAME")

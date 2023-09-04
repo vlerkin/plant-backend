@@ -1,6 +1,8 @@
 annotated-types==0.5.0
 anyio==3.7.1
 bcrypt==4.0.1
+boto3==1.28.40
+botocore==1.31.40
 cffi==1.15.1
 click==8.1.7
 cryptography==41.0.3
@@ -11,6 +13,7 @@ fastapi==0.103.0
 h11==0.14.0
 httptools==0.6.0
 idna==3.4
+jmespath==1.0.1
 marshmallow==3.20.1
 packaging==23.1
 passlib==1.7.4
@@ -19,16 +22,19 @@ pyasn1==0.5.0
 pycparser==2.21
 pydantic==2.3.0
 pydantic_core==2.6.3
+python-dateutil==2.8.2
 python-dotenv==1.0.0
 python-jose==3.3.0
 python-multipart==0.0.6
 PyYAML==6.0.1
 rsa==4.9
+s3transfer==0.6.2
 six==1.16.0
 sniffio==1.3.0
 SQLAlchemy==2.0.20
 starlette==0.27.0
 typing_extensions==4.7.1
+urllib3==1.26.16
 uvicorn==0.23.2
 uvloop==0.17.0
 watchfiles==0.20.0
