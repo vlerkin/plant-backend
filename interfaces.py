@@ -1,7 +1,9 @@
 from datetime import datetime
 from enum import Enum
 
+from fastapi import UploadFile
 from pydantic import BaseModel, Field, EmailStr, constr
+from dataclasses import dataclass
 
 
 class NewUser(BaseModel):
@@ -36,7 +38,7 @@ class PlantUpdate(BaseModel):
     howOftenWatering: int = Field(..., gt=0)
     waterVolume: float = Field(..., gt=0)
     light: LightEnum
-    location: LocationEnum | None
+    location: LocationEnum
     photo: str | None
     comment: str | None
     species: str | None

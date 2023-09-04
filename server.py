@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from pprint import pprint
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, Form, File
 from fastapi.middleware.cors import CORSMiddleware
 from jose import jwt, JWTError
 from pydantic import ValidationError
@@ -13,7 +13,7 @@ from auth import get_password_hash, oauth2_scheme, get_user, authenticate_user, 
 from config import Configuration
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease
 from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate, UserUpdate, CreateFertilizing, \
-    PlantDiseaseCreate
+    PlantDiseaseCreate, LightEnum, LocationEnum
 from typing import Annotated, List
 
 app = FastAPI()
@@ -101,7 +101,6 @@ async def show_my_plants(user: User = Depends(get_current_user)):
 # create a plant
 @app.post("/my-plants")
 async def create_plant(new_plant: PlantUpdate, user: User = Depends(get_current_user)):
-    user_id = user.id
     try:
         db_new_plant = Plant(name=new_plant.name,
                              photo=new_plant.photo,
@@ -111,12 +110,17 @@ async def create_plant(new_plant: PlantUpdate, user: User = Depends(get_current_
                              location=new_plant.location,
                              comment=new_plant.comment,
                              species=new_plant.species,
-                             userId=user_id)
+                             userId=user.id)
         session.add(db_new_plant)
         session.commit()
         return new_plant
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@app.post("/upload")
+async def upload_photo(file: UploadFile, user: User = Depends(get_current_user)):
+    return {'filename': file.filename, 'user_id': user.id}
 
 
 # get user profile

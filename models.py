@@ -44,7 +44,7 @@ class Plant(Base):
     howOftenWatering: Mapped[int] = mapped_column("how_often_watering")
     waterVolume: Mapped[float] = mapped_column("water_volume")
     light: Mapped[str]
-    location: Mapped[Optional[str]]
+    location: Mapped[str]
     comment: Mapped[Optional[str]]
     species: Mapped[Optional[str]]
     userId: Mapped[int] = mapped_column("user_id", ForeignKey("user_account.id"))
