@@ -88,7 +88,7 @@ class PlantDiseaseCreate(BaseModel):
     comment: str | None
 
 
-class Plant(BaseModel):
+class PlantInfo(BaseModel):
     id: int
     name: str
     howOftenWatering: int
@@ -126,7 +126,7 @@ class DiseaseLog(BaseModel):
 
 
 class PlantIndividualInfo(BaseModel):
-    info: Plant
+    info: PlantInfo
     watering_log: WateringLog | None
     fertilizing_log: FertilizingLog | None
     disease_log: list[DiseaseLog] | None

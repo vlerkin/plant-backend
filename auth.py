@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 
+from fastapi import HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from config import Configuration
+from config import Configuration, session
 from models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -48,5 +49,20 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 
-
-
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, Configuration.secret_key, algorithms=[Configuration.algorithm])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    user = get_user(session, email)
+    if user is None:
+        raise credentials_exception
+    return user
