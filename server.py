@@ -1,10 +1,7 @@
-import random
-import uuid
 from datetime import datetime, timedelta
-from pprint import pprint
 
 import boto3
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, Form, File
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from jose import jwt, JWTError
 from pydantic import ValidationError
@@ -16,7 +13,7 @@ from auth import get_password_hash, oauth2_scheme, get_user, authenticate_user, 
 from config import Configuration
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease
 from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate, UserUpdate, CreateFertilizing, \
-    PlantDiseaseCreate, LightEnum, LocationEnum
+    PlantDiseaseCreate, PlantIndividualInfo
 from typing import Annotated, List
 
 app = FastAPI()
@@ -175,18 +172,23 @@ async def edit_profile(user_info: UserUpdate, user: User = Depends(get_current_u
 
 
 # get a plant's info
-@app.get("/my-plants/{plant_id}")
+@app.get("/my-plants/{plant_id}", response_model=PlantIndividualInfo)
 async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
     user_id = user.id
-    thirty_days_ago = datetime.now() - timedelta(days=30)
-    ninety_days_ago = datetime.now() - timedelta(days=90)
     plant_of_user = session.query(Plant).filter_by(userId=user_id, id=plant_id).one()
-    plant_watering = session.query(WaterLog).filter(WaterLog.plantId == plant_id, WaterLog.dateTime >= thirty_days_ago).all()
-    plant_fertilizing = session.query(FertilizerLog).filter(FertilizerLog.plantId == plant_id, FertilizerLog.dateTime >= thirty_days_ago).all()
-    plant_disease = session.query(PlantDisease).filter(PlantDisease.plantId == plant_id, PlantDisease.startDate >= ninety_days_ago).order_by(desc(PlantDisease.endDate)).all()
+    plant_watering = session.query(
+        WaterLog).where(WaterLog.plantId == plant_id).order_by(desc(WaterLog.dateTime)).limit(1).one()
+    plant_fertilizing = session.query(
+        FertilizerLog).where(FertilizerLog.plantId == plant_id).order_by(desc(FertilizerLog.dateTime)).limit(1).one()
+    plant_diseases = session.query(
+        PlantDisease).where(PlantDisease.plantId == plant_id).order_by(desc(PlantDisease.startDate)).limit(3).all()
+
     if not plant_of_user:
         raise HTTPException(status_code=404, detail="Plant not found")
-    return {"info": plant_of_user, "photo": plant_of_user.photo_url, "watering_log": plant_watering, "fertilizing_log": plant_fertilizing, "disease_log": plant_disease}
+    return {"info": plant_of_user,
+            "watering_log": plant_watering,
+            "fertilizing_log": plant_fertilizing,
+            "disease_log": plant_diseases}
 
 
 # delete a plant

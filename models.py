@@ -118,3 +118,9 @@ class PlantDisease(Base):
     startDate: Mapped[datetime] = mapped_column("start_date")
     endDate: Mapped[Optional[datetime]] = mapped_column("end_date")
     treatment: Mapped[Optional[str]]
+
+    disease: Mapped["Disease"] = relationship()
+
+    @property
+    def disease_type(self):
+        return self.disease.type

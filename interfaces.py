@@ -1,9 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from fastapi import UploadFile
-from pydantic import BaseModel, Field, EmailStr, constr
-from dataclasses import dataclass
+from pydantic import BaseModel, Field, EmailStr
 
 
 class NewUser(BaseModel):
@@ -88,4 +86,48 @@ class PlantDiseaseCreate(BaseModel):
     endDate: datetime
     treatment: str | None
     comment: str | None
+
+
+class Plant(BaseModel):
+    id: int
+    name: str
+    howOftenWatering: int
+    location: str | None
+    species: str | None
+    waterVolume: float
+    light: str
+    comment: str | None
+    userId: int
+    photo_url: str | None
+
+
+class WateringLog(BaseModel):
+    id: int
+    plantId: int
+    dateTime: datetime
+    waterVolume: float
+
+
+class FertilizingLog(BaseModel):
+    id: int
+    plantId: int
+    dateTime: datetime
+    type: str
+    quantity: int
+
+
+class DiseaseLog(BaseModel):
+    id: int
+    plantId: int
+    startDate: datetime
+    endDate: datetime | None
+    treatment: str | None
+    disease_type: str
+
+
+class PlantIndividualInfo(BaseModel):
+    info: Plant
+    watering_log: WateringLog | None
+    fertilizing_log: FertilizingLog | None
+    disease_log: list[DiseaseLog] | None
 
