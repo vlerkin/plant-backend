@@ -1,4 +1,6 @@
+import uuid
 from datetime import datetime, timedelta
+from uuid import UUID
 
 import boto3
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile
@@ -8,12 +10,13 @@ from pydantic import ValidationError
 
 from sqlalchemy import create_engine, desc, update
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.exc import NoResultFound
 
 from auth import get_password_hash, oauth2_scheme, get_user, authenticate_user, create_access_token
 from config import Configuration
-from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease
+from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease, AccessToken
 from interfaces import NewUser, LoginUser, UserProfile, MyPlants, PlantUpdate, UserUpdate, CreateFertilizing, \
-    PlantDiseaseCreate, PlantIndividualInfo
+    PlantDiseaseCreate, PlantIndividualInfo, GuestInput, TokenDelete
 from typing import Annotated, List
 
 app = FastAPI()
@@ -176,15 +179,29 @@ async def edit_profile(user_info: UserUpdate, user: User = Depends(get_current_u
 async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
     user_id = user.id
     plant_of_user = session.query(Plant).filter_by(userId=user_id, id=plant_id).one()
-    plant_watering = session.query(
-        WaterLog).where(WaterLog.plantId == plant_id).order_by(desc(WaterLog.dateTime)).limit(1).one()
-    plant_fertilizing = session.query(
-        FertilizerLog).where(FertilizerLog.plantId == plant_id).order_by(desc(FertilizerLog.dateTime)).limit(1).one()
-    plant_diseases = session.query(
-        PlantDisease).where(PlantDisease.plantId == plant_id).order_by(desc(PlantDisease.startDate)).limit(3).all()
-
     if not plant_of_user:
         raise HTTPException(status_code=404, detail="Plant not found")
+
+    plant_watering = None
+    plant_fertilizing = None
+    plant_diseases = None
+    try:
+        plant_watering = session.query(
+            WaterLog).where(WaterLog.plantId == plant_id).order_by(desc(WaterLog.dateTime)).limit(1).one()
+    except NoResultFound:
+        pass
+    try:
+        plant_fertilizing = session.query(
+            FertilizerLog).where(FertilizerLog.plantId == plant_id).order_by(desc(FertilizerLog.dateTime)).limit(
+            1).one()
+    except NoResultFound:
+        pass
+    try:
+        plant_diseases = session.query(
+            PlantDisease).where(PlantDisease.plantId == plant_id).order_by(desc(PlantDisease.startDate)).limit(3).all()
+    except NoResultFound:
+        pass
+
     return {"info": plant_of_user,
             "watering_log": plant_watering,
             "fertilizing_log": plant_fertilizing,
@@ -321,3 +338,38 @@ async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, use
 async def all_diseases():
     diseases = session.query(Disease).all()
     return diseases
+
+
+@app.get("/access-tokens")
+async def get_all_tokens(user: User = Depends(get_current_user)):
+    access_tokens_of_user = session.query(AccessToken).filter(AccessToken.userId == user.id).all()
+    return access_tokens_of_user
+
+
+@app.post("/access-tokens")
+async def create_access_token(guest_input: GuestInput, user: User = Depends(get_current_user)):
+    access_token = AccessToken(
+        token=str(uuid.uuid4()),
+        nameToken=guest_input.guest_name,
+        startDate=datetime.now(),
+        endDate=guest_input.end_date,
+        userId=user.id,
+    )
+    session.add(access_token)
+    session.commit()
+
+    session.refresh(access_token)
+    return access_token
+
+
+@app.delete("/access-tokens")
+async def delete_access_token(token: TokenDelete, user: User = Depends(get_current_user)):
+    try:
+        token_to_delete = session.query(
+            AccessToken).filter(AccessToken.id == token.token_id, AccessToken.userId == user.id).one()
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Token not found")
+
+    session.delete(token_to_delete)
+    session.commit()
+    return {"message": "Token deleted"}

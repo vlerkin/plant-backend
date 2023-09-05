@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, FutureDatetime
 
 
 class NewUser(BaseModel):
@@ -57,7 +57,7 @@ class MyPlants(BaseModel):
     id: int
     name: str
     howOftenWatering: int
-    location: str | None
+    location: str
     species: str | None
     waterVolume: float
     light: str
@@ -92,7 +92,7 @@ class Plant(BaseModel):
     id: int
     name: str
     howOftenWatering: int
-    location: str | None
+    location: str
     species: str | None
     waterVolume: float
     light: str
@@ -130,4 +130,13 @@ class PlantIndividualInfo(BaseModel):
     watering_log: WateringLog | None
     fertilizing_log: FertilizingLog | None
     disease_log: list[DiseaseLog] | None
+
+
+class GuestInput(BaseModel):
+    guest_name: str = Field(..., min_length=3)
+    end_date: FutureDatetime
+
+
+class TokenDelete(BaseModel):
+    token_id: int
 
