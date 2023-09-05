@@ -85,7 +85,6 @@ class PlantDiseaseCreate(BaseModel):
     startDate: datetime
     endDate: datetime
     treatment: str | None
-    comment: str | None
 
 
 class PlantInfo(BaseModel):

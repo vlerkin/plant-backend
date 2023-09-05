@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import desc, update
+from sqlalchemy import update
 from sqlalchemy.exc import NoResultFound
 
 from auth import get_current_user
@@ -11,7 +11,7 @@ from interfaces import MyPlants, PlantUpdate, PlantIndividualInfo, CreateFertili
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease
 from pydantic import ValidationError
 
-from services.plant import get_user_plant_by_id
+from services.plant import get_user_plant_by_id, get_last_plant_watering, get_last_plant_fertilizing, get_plant_diseases
 
 router = APIRouter()
 
@@ -50,25 +50,9 @@ async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
     if not plant_of_user:
         raise HTTPException(status_code=404, detail="Plant not found")
 
-    plant_watering = None
-    plant_fertilizing = None
-    plant_diseases = None
-    try:
-        plant_watering = session.query(
-            WaterLog).where(WaterLog.plantId == plant_id).order_by(desc(WaterLog.dateTime)).limit(1).one()
-    except NoResultFound:
-        pass
-    try:
-        plant_fertilizing = session.query(
-            FertilizerLog).where(FertilizerLog.plantId == plant_id).order_by(desc(FertilizerLog.dateTime)).limit(
-            1).one()
-    except NoResultFound:
-        pass
-    try:
-        plant_diseases = session.query(
-            PlantDisease).where(PlantDisease.plantId == plant_id).order_by(desc(PlantDisease.startDate)).limit(3).all()
-    except NoResultFound:
-        pass
+    plant_watering = get_last_plant_watering(plant_id)
+    plant_fertilizing = get_last_plant_fertilizing(plant_id)
+    plant_diseases = get_plant_diseases(plant_id, 3)
 
     return {"info": plant_of_user,
             "watering_log": plant_watering,
@@ -162,9 +146,11 @@ async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, use
     if not plant_to_update:
         raise HTTPException(status_code=404, detail="Plant not found")
     # check if requested disease with the provided id exists
-    requested_disease = session.query(Disease).filter_by(id=disease_info.diseaseId).one()
-    if not requested_disease:
+    try:
+        requested_disease = session.query(Disease).filter_by(id=disease_info.diseaseId).one()
+    except NoResultFound:
         raise HTTPException(status_code=404, detail="Disease not found")
+
     # check if user has created the same plant_disease for the past day for the same plant and disease
     yesterday = datetime.now() - timedelta(days=1)
     plant_disease = session.query(PlantDisease).filter(PlantDisease.plantId == plant_id,
@@ -176,11 +162,10 @@ async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, use
         return None
     try:
         db_new_plant_disease = PlantDisease(plantId=plant_id,
-                                            diseaseId=disease_info.diseaseId,
+                                            diseaseId=requested_disease.id,
                                             startDate=disease_info.startDate,
                                             endDate=disease_info.endDate,
-                                            treatment=disease_info.treatment,
-                                            comment=disease_info.comment)
+                                            treatment=disease_info.treatment)
         session.add(db_new_plant_disease)
         session.commit()
         return disease_info
