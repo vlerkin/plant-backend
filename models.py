@@ -4,6 +4,8 @@ from typing import Optional, List
 from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from config import Configuration
+
 
 class Base(DeclarativeBase):
     pass
@@ -53,6 +55,10 @@ class Plant(Base):
     waterLogs: Mapped[List["WaterLog"]] = relationship(cascade="all, delete-orphan", back_populates="plant")
     fertilizerLogs: Mapped[List["FertilizerLog"]] = relationship(cascade="all, delete-orphan", back_populates="plant")
     diseases: Mapped[List["PlantDisease"]] = relationship()
+
+    @property
+    def photo_url(self):
+        return Configuration.image_hostname + self.photo if self.photo else None
 
     @property
     def is_healthy(self):

@@ -61,13 +61,13 @@ class MyPlants(BaseModel):
     howOftenWatering: int
     location: str | None
     species: str | None
-    photo: str | None
     waterVolume: float
     light: str
     comment: str | None
     userId: int
     is_healthy: bool | None
     time_to_water: bool | None
+    photo_url: str | None
 
 
 class UserUpdate(BaseModel):

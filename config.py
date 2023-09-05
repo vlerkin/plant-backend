@@ -15,3 +15,5 @@ class Configuration:
     aws_secret_access_key: str = os.getenv("AWS_SECRET")
     aws_region_name: str = os.getenv("AWS_REGION")
     aws_bucket_name: str = os.getenv("AWS_BUCKET_NAME")
+
+    image_hostname: str = "http://" + aws_bucket_name + ".s3." + aws_region_name + ".amazonaws.com/"

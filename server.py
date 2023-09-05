@@ -130,13 +130,9 @@ async def create_plant(new_plant: PlantUpdate, user: User = Depends(get_current_
 
 @app.post("/upload/{category}")
 async def upload_photo(file: UploadFile, category: str, user: User = Depends(get_current_user)):
-    to_show = s3.upload_fileobj(
-        file.file,
-        Configuration.aws_bucket_name,
-        str(user.id) + "/" + category + "/" + file.filename.lower()
-    )
-    print(to_show)
-    return {'filename': file.filename, 'user_id': user.id}
+    filename = str(user.id) + "/" + category + "/" + file.filename.lower()
+    s3.upload_fileobj(file.file, Configuration.aws_bucket_name, filename)
+    return {'filename': filename, 'user_id': user.id}
 
 
 # get user profile
@@ -190,7 +186,7 @@ async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
     plant_disease = session.query(PlantDisease).filter(PlantDisease.plantId == plant_id, PlantDisease.startDate >= ninety_days_ago).order_by(desc(PlantDisease.endDate)).all()
     if not plant_of_user:
         raise HTTPException(status_code=404, detail="Plant not found")
-    return {"info": plant_of_user, "watering_log": plant_watering, "fertilizing_log": plant_fertilizing, "disease_log": plant_disease}
+    return {"info": plant_of_user, "photo": plant_of_user.photo_url, "watering_log": plant_watering, "fertilizing_log": plant_fertilizing, "disease_log": plant_disease}
 
 
 # delete a plant
