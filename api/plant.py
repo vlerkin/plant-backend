@@ -11,6 +11,7 @@ from interfaces import MyPlants, PlantUpdate, PlantIndividualInfo, CreateFertili
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease
 from pydantic import ValidationError
 
+from services.plant import get_user_plant_by_id
 
 router = APIRouter()
 
@@ -45,8 +46,7 @@ async def create_plant(new_plant: PlantUpdate, user: User = Depends(get_current_
 # get a plant's info
 @router.get("/my-plants/{plant_id}", response_model=PlantIndividualInfo)
 async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
-    user_id = user.id
-    plant_of_user = session.query(Plant).filter_by(userId=user_id, id=plant_id).one()
+    plant_of_user = get_user_plant_by_id(user.id, plant_id)
     if not plant_of_user:
         raise HTTPException(status_code=404, detail="Plant not found")
 
@@ -79,8 +79,7 @@ async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
 # delete a plant
 @router.delete("/my-plants/{plant_id}")
 async def delete_plant(plant_id: int, user: User = Depends(get_current_user)):
-    user_id = user.id
-    plant_to_delete = session.query(Plant).filter(Plant.userId == user_id, Plant.id == plant_id).one()
+    plant_to_delete = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_delete:
         raise HTTPException(status_code=404, detail="Plant not found")
     session.delete(plant_to_delete)
@@ -90,14 +89,10 @@ async def delete_plant(plant_id: int, user: User = Depends(get_current_user)):
 
 @router.patch("/my-plants/{plant_id}")
 async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depends(get_current_user)):
-    # get user id from auth to add it later to a plant info to update a plant
-    user_id = user.id
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
-    plant_to_update = session.query(Plant).filter_by(id=plant_id).one()
+    plant_to_update = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_update:
         raise HTTPException(status_code=404, detail="Plant not found")
-    if plant_to_update.userId != user_id:
-        raise HTTPException(status_code=401, detail="You are not authorized")
     location = plant_to_update.location
     photo = plant_to_update.photo
     comment = plant_to_update.comment
@@ -118,7 +113,7 @@ async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depe
                     Plant.photo: photo,
                     Plant.comment: comment,
                     Plant.species: species,
-                    Plant.userId: user_id}
+                    Plant.userId: user.id}
     session.execute(update(Plant).where(Plant.id == plant_id).values(plant_update))
     session.commit()
     return {"message": "plant updated"}
@@ -126,13 +121,10 @@ async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depe
 
 @router.post("/my-plants/{plant_id}/watering")
 async def create_watering(plant_id: int, user: User = Depends(get_current_user)):
-    user_id = user.id
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
-    plant_to_update = session.query(Plant).filter_by(id=plant_id).one()
+    plant_to_update = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_update:
         raise HTTPException(status_code=404, detail="Plant not found")
-    if plant_to_update.userId != user_id:
-        raise HTTPException(status_code=401, detail="You are not authorized")
 
     try:
         db_new_watering = WaterLog(dateTime=datetime.now(),
@@ -147,13 +139,10 @@ async def create_watering(plant_id: int, user: User = Depends(get_current_user))
 
 @router.post("/my-plants/{plant_id}/fertilizing")
 async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing, user: User = Depends(get_current_user)):
-    user_id = user.id
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
-    plant_to_update = session.query(Plant).filter_by(id=plant_id).one()
+    plant_to_update = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_update:
         raise HTTPException(status_code=404, detail="Plant not found")
-    if plant_to_update.userId != user_id:
-        raise HTTPException(status_code=401, detail="You are not authorized")
     try:
         db_new_fertilizing = FertilizerLog(dateTime=datetime.now(),
                                            quantity=fertilizing_info.quantity,
@@ -168,13 +157,10 @@ async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing,
 
 @router.post("/my-plants/{plant_id}/plant-disease")
 async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, user: User = Depends(get_current_user)):
-    user_id = user.id
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
-    plant_to_update = session.query(Plant).filter_by(id=plant_id).one()
+    plant_to_update = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_update:
         raise HTTPException(status_code=404, detail="Plant not found")
-    if plant_to_update.userId != user_id:
-        raise HTTPException(status_code=401, detail="You are not authorized")
     # check if requested disease with the provided id exists
     requested_disease = session.query(Disease).filter_by(id=disease_info.diseaseId).one()
     if not requested_disease:
