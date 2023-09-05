@@ -127,6 +127,8 @@ async def water_several_plants(plant_ids: ArrayId, user: User = Depends(get_curr
         raise HTTPException(status_code=400, detail="No plant ids")
 
     plants = session.query(Plant).filter(Plant.id.in_(plant_ids.ids), Plant.userId == user.id).all()
+    # if plants has lower number of ids then some plants do not belong to an authorized user
+    # or we have an edge case with non-unique ids
     if len(plants) != len(plant_ids.ids):
         raise HTTPException(status_code=400, detail="Bad request")
 
