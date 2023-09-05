@@ -7,7 +7,7 @@ from sqlalchemy.exc import NoResultFound
 
 from auth import get_current_user
 from config import session
-from interfaces import MyPlants, PlantUpdate, PlantIndividualInfo, CreateFertilizing, PlantDiseaseCreate
+from interfaces import MyPlants, PlantUpdate, PlantIndividualInfo, CreateFertilizing, PlantDiseaseCreate, ArrayId
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease
 from pydantic import ValidationError
 
@@ -119,6 +119,25 @@ async def create_watering(plant_id: int, user: User = Depends(get_current_user))
         return {"message": "plant watered"}
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@router.post("/my-plants/watering")
+async def water_several_plants(plant_ids: ArrayId, user: User = Depends(get_current_user)):
+    if len(plant_ids.ids) == 0:
+        raise HTTPException(status_code=400, detail="No plant ids")
+
+    plants = session.query(Plant).filter(Plant.id.in_(plant_ids.ids), Plant.userId == user.id).all()
+    if len(plants) != len(plant_ids.ids):
+        raise HTTPException(status_code=400, detail="Bad request")
+
+    for plant in plants:
+        session.add(
+            WaterLog(dateTime=datetime.now(),
+                     waterVolume=plant.waterVolume,
+                     plantId=plant.id)
+        )
+    session.commit()
+    return {"message": "Plants watered"}
 
 
 @router.post("/my-plants/{plant_id}/fertilizing")

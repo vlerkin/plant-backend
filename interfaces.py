@@ -139,3 +139,6 @@ class GuestInput(BaseModel):
 class TokenDelete(BaseModel):
     token_id: int
 
+
+class ArrayId(BaseModel):
+    ids: list[int]
