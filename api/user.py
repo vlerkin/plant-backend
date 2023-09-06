@@ -95,7 +95,7 @@ async def get_all_tokens(user: User = Depends(get_current_user)):
 
 
 @router.post("/access-tokens")
-async def create_access_token(guest_input: GuestInput, user: User = Depends(get_current_user)):
+async def create_guest_token(guest_input: GuestInput, user: User = Depends(get_current_user)):
     access_token = AccessToken(
         token=str(uuid.uuid4()),
         nameToken=guest_input.guest_name,
@@ -111,7 +111,7 @@ async def create_access_token(guest_input: GuestInput, user: User = Depends(get_
 
 
 @router.delete("/access-tokens")
-async def delete_access_token(token: TokenDelete, user: User = Depends(get_current_user)):
+async def delete_guest_token(token: TokenDelete, user: User = Depends(get_current_user)):
     try:
         token_to_delete = session.query(
             AccessToken).filter(AccessToken.id == token.token_id, AccessToken.userId == user.id).one()

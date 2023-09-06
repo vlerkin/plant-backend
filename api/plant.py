@@ -7,7 +7,8 @@ from sqlalchemy.exc import NoResultFound
 
 from auth import get_current_user
 from config import session
-from interfaces import MyPlants, PlantUpdate, PlantIndividualInfo, CreateFertilizing, PlantDiseaseCreate, ArrayId
+from interfaces import MyPlants, PlantUpdate, PlantIndividualInfo, CreateFertilizing, PlantDiseaseCreate, ArrayId, \
+    WateringLog
 from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease
 from pydantic import ValidationError
 
@@ -103,7 +104,7 @@ async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depe
     return {"message": "plant updated"}
 
 
-@router.post("/my-plants/{plant_id}/watering")
+@router.post("/my-plants/{plant_id}/watering", response_model=WateringLog)
 async def create_watering(plant_id: int, user: User = Depends(get_current_user)):
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
     plant_to_update = get_user_plant_by_id(user.id, plant_id)
@@ -116,7 +117,7 @@ async def create_watering(plant_id: int, user: User = Depends(get_current_user))
                                    plantId=plant_to_update.id)
         session.add(db_new_watering)
         session.commit()
-        return {"message": "plant watered"}
+        return db_new_watering
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
 

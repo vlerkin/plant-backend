@@ -72,10 +72,17 @@ class Plant(Base):
     @property
     def time_to_water(self):
         today = datetime.now()
-        for watering in self.waterLogs:
-            difference_in_days = (today - watering.dateTime).days
-            if difference_in_days >= self.howOftenWatering:
-                return True
+        watering = None
+        for record in self.waterLogs:
+            if not watering or watering.dateTime < record.dateTime:
+                watering = record
+
+        if not watering:
+            return True
+
+        difference_in_days = (today - watering.dateTime).days
+        if difference_in_days >= self.howOftenWatering:
+            return True
         return False
 
 
