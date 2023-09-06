@@ -35,7 +35,7 @@ async def create_new_user(new_user: NewUser):
 # log in a user
 @router.post("/login")
 async def login_user(user_to_login: LoginUser):
-    user = authenticate_user(session, user_to_login.email, user_to_login.password)
+    user = authenticate_user(user_to_login.email, user_to_login.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -122,3 +122,19 @@ async def delete_guest_token(token: TokenDelete, user: User = Depends(get_curren
     session.commit()
     return {"message": "Token deleted"}
 
+
+@router.get("/access-tokens/authorize/{access_token}")
+async def authorize_guest(access_token: str):
+    try:
+        access_token = session.query(AccessToken).filter_by(token=access_token).one()
+    except NoResultFound:
+        raise HTTPException(status_code=401, detail="Authorization failed")
+
+    if access_token.endDate < datetime.now():
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    token = create_access_token(
+        data={"sub": access_token.user.email, "aud": "guest"},
+        expires_delta=(access_token.endDate - datetime.now())
+    )
+    return {"guest_token": token, "token_type": "bearer"}
