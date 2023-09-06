@@ -8,8 +8,8 @@ from sqlalchemy.exc import NoResultFound
 from auth import get_current_user
 from config import session
 from interfaces import MyPlants, PlantUpdate, PlantIndividualInfo, CreateFertilizing, PlantDiseaseCreate, ArrayId, \
-    WateringLog
-from models import User, Plant, WaterLog, FertilizerLog, PlantDisease, Disease
+    WateringLog, AuthUser
+from models import Plant, WaterLog, FertilizerLog, PlantDisease, Disease
 from pydantic import ValidationError
 
 from services.plant import get_user_plant_by_id, get_last_plant_watering, get_last_plant_fertilizing, get_plant_diseases
@@ -19,14 +19,14 @@ router = APIRouter()
 
 # get user's plants
 @router.get("/my-plants", response_model=List[MyPlants])
-async def show_my_plants(user: User = Depends(get_current_user)):
+async def show_my_plants(user: AuthUser = Depends(get_current_user)):
     user_plants = (session.query(Plant).filter_by(userId=user.id).all())
     return user_plants
 
 
 # create a plant
 @router.post("/my-plants")
-async def create_plant(new_plant: PlantUpdate, user: User = Depends(get_current_user)):
+async def create_plant(new_plant: PlantUpdate, user: AuthUser = Depends(get_current_user)):
     try:
         db_new_plant = Plant(name=new_plant.name,
                              photo=new_plant.photo,
@@ -46,7 +46,7 @@ async def create_plant(new_plant: PlantUpdate, user: User = Depends(get_current_
 
 # get a plant's info
 @router.get("/my-plants/{plant_id}", response_model=PlantIndividualInfo)
-async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
+async def get_plant(plant_id: int, user: AuthUser = Depends(get_current_user)):
     plant_of_user = get_user_plant_by_id(user.id, plant_id)
     if not plant_of_user:
         raise HTTPException(status_code=404, detail="Plant not found")
@@ -63,7 +63,7 @@ async def get_plant(plant_id: int, user: User = Depends(get_current_user)):
 
 # delete a plant
 @router.delete("/my-plants/{plant_id}")
-async def delete_plant(plant_id: int, user: User = Depends(get_current_user)):
+async def delete_plant(plant_id: int, user: AuthUser = Depends(get_current_user)):
     plant_to_delete = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_delete:
         raise HTTPException(status_code=404, detail="Plant not found")
@@ -73,7 +73,7 @@ async def delete_plant(plant_id: int, user: User = Depends(get_current_user)):
 
 
 @router.patch("/my-plants/{plant_id}")
-async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depends(get_current_user)):
+async def update_plant(plant_id: int, plant_info: PlantUpdate, user: AuthUser = Depends(get_current_user)):
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
     plant_to_update = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_update:
@@ -105,7 +105,7 @@ async def update_plant(plant_id: int, plant_info: PlantUpdate, user: User = Depe
 
 
 @router.post("/my-plants/{plant_id}/watering", response_model=WateringLog)
-async def create_watering(plant_id: int, user: User = Depends(get_current_user)):
+async def create_watering(plant_id: int, user: AuthUser = Depends(get_current_user)):
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
     plant_to_update = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_update:
@@ -123,7 +123,7 @@ async def create_watering(plant_id: int, user: User = Depends(get_current_user))
 
 
 @router.post("/my-plants/watering")
-async def water_several_plants(plant_ids: ArrayId, user: User = Depends(get_current_user)):
+async def water_several_plants(plant_ids: ArrayId, user: AuthUser = Depends(get_current_user)):
     if len(plant_ids.ids) == 0:
         raise HTTPException(status_code=400, detail="No plant ids")
 
@@ -144,7 +144,7 @@ async def water_several_plants(plant_ids: ArrayId, user: User = Depends(get_curr
 
 
 @router.post("/my-plants/{plant_id}/fertilizing")
-async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing, user: User = Depends(get_current_user)):
+async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing, user: AuthUser = Depends(get_current_user)):
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
     plant_to_update = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_update:
@@ -162,7 +162,7 @@ async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing,
 
 
 @router.post("/my-plants/{plant_id}/plant-disease")
-async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, user: User = Depends(get_current_user)):
+async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, user: AuthUser = Depends(get_current_user)):
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
     plant_to_update = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_update:

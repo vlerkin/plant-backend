@@ -7,7 +7,7 @@ from sqlalchemy import update
 from sqlalchemy.exc import NoResultFound
 
 from auth import get_password_hash, authenticate_user, create_access_token, get_current_user
-from interfaces import NewUser, LoginUser, UserProfile, UserUpdate, GuestInput, TokenDelete
+from interfaces import NewUser, LoginUser, UserProfile, UserUpdate, GuestInput, TokenDelete, AuthUser
 from models import User, AccessToken
 from config import session
 
@@ -50,12 +50,12 @@ async def login_user(user_to_login: LoginUser):
 
 # get user profile
 @router.get("/me", response_model=UserProfile)
-async def show_me(user: User = Depends(get_current_user)):
+async def show_me(user: AuthUser = Depends(get_current_user)):
     return user
 
 
 @router.patch("/me")
-async def edit_profile(user_info: UserUpdate, user: User = Depends(get_current_user)):
+async def edit_profile(user_info: UserUpdate, user: AuthUser = Depends(get_current_user)):
     user_id = user.id
     user_to_update = session.query(User).filter_by(id=user_id).one()
     # take existing photo
@@ -89,13 +89,13 @@ async def edit_profile(user_info: UserUpdate, user: User = Depends(get_current_u
 
 # access token endpoints
 @router.get("/access-tokens")
-async def get_all_tokens(user: User = Depends(get_current_user)):
+async def get_all_tokens(user: AuthUser = Depends(get_current_user)):
     access_tokens_of_user = session.query(AccessToken).filter(AccessToken.userId == user.id).all()
     return access_tokens_of_user
 
 
 @router.post("/access-tokens")
-async def create_guest_token(guest_input: GuestInput, user: User = Depends(get_current_user)):
+async def create_guest_token(guest_input: GuestInput, user: AuthUser = Depends(get_current_user)):
     access_token = AccessToken(
         token=str(uuid.uuid4()),
         nameToken=guest_input.guest_name,
@@ -111,7 +111,7 @@ async def create_guest_token(guest_input: GuestInput, user: User = Depends(get_c
 
 
 @router.delete("/access-tokens")
-async def delete_guest_token(token: TokenDelete, user: User = Depends(get_current_user)):
+async def delete_guest_token(token: TokenDelete, user: AuthUser = Depends(get_current_user)):
     try:
         token_to_delete = session.query(
             AccessToken).filter(AccessToken.id == token.token_id, AccessToken.userId == user.id).one()

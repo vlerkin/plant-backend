@@ -51,6 +51,15 @@ class UserProfile(BaseModel):
     name: str
     email: str
     photo: str | None
+    is_guest: bool = False
+
+
+class AuthUser(BaseModel):
+    id: int
+    name: str
+    email: str
+    photo: str | None
+    is_guest: bool
 
 
 class MyPlants(BaseModel):

@@ -8,12 +8,14 @@ from passlib.context import CryptContext
 from sqlalchemy.exc import NoResultFound
 
 from config import Configuration, session
+from interfaces import AuthUser
 from models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 allow_guest_to_routes = [
+    r"GET /me",
     r'GET /my-plants',
     r'GET /my-plants/\d+',
     r'POST /my-plants/\d+/watering',
@@ -90,4 +92,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), request: Request
     user = get_user(email)
     if user is None:
         raise credentials_exception
-    return user
+
+    if guest:
+        return AuthUser(id=user.id, name="Guest", email="", photo="", is_guest=True)
+    else:
+        return AuthUser(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            photo=user.photo,
+            is_guest=False,
+        )
