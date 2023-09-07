@@ -78,9 +78,9 @@ class MyPlants(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    email: EmailStr
+    email: EmailStr | None
     password: str | None
-    name: str = Field(..., max_length=100)
+    name: None | str = Field(..., max_length=100)
     photo: str | None
 
 

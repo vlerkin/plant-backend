@@ -58,18 +58,24 @@ async def show_me(user: AuthUser = Depends(get_current_user)):
 async def edit_profile(user_info: UserUpdate, user: AuthUser = Depends(get_current_user)):
     user_id = user.id
     user_to_update = session.query(User).filter_by(id=user_id).one()
-    # take existing photo
-    photo = user.photo
     if not user_to_update:
         raise HTTPException(status_code=404, detail="User not found")
-    # if user provided new photo, update photo variable to use for patching
+
+    photo = user.photo
+    name = user.name
+    email = user.email
     if user_info.photo:
         photo = user_info.photo
+    if user_info.email:
+        email = user_info.email
+    if user_info.name:
+        name = user_info.name
+
     # if user provided new password, check it and hash before updating
     if user_info.password and get_password_hash(user_info.password) != user_to_update.password:
         hashed_password = get_password_hash(user_info.password)
-        user_update = {User.name: user_info.name,
-                       User.email: user_info.email,
+        user_update = {User.name: name,
+                       User.email: email,
                        User.photo: photo,
                        User.password: hashed_password
                        }
