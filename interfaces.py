@@ -62,6 +62,7 @@ class AuthUser(BaseModel):
     is_guest: bool
 
 
+
 class MyPlants(BaseModel):
     id: int
     name: str

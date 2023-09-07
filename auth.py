@@ -100,6 +100,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme), request: Request
             id=user.id,
             name=user.name,
             email=user.email,
-            photo=user.photo,
+            photo=user.photo_url,
             is_guest=False,
         )

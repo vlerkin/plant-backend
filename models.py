@@ -23,6 +23,10 @@ class User(Base):
     plants: Mapped[List["Plant"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     accessTokens: Mapped[List["AccessToken"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
+    @property
+    def photo_url(self):
+        return Configuration.image_hostname + self.photo if self.photo else None
+
 
 class AccessToken(Base):
     __tablename__ = "access_token"
