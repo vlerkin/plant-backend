@@ -71,26 +71,14 @@ async def edit_profile(user_info: UserUpdate, user: AuthUser = Depends(get_curre
     if user_info.name:
         name = user_info.name
 
-    # if user provided new password, check it and hash before updating
-    if user_info.password and get_password_hash(user_info.password) != user_to_update.password:
-        hashed_password = get_password_hash(user_info.password)
-        user_update = {User.name: name,
-                       User.email: email,
-                       User.photo: photo,
-                       User.password: hashed_password
-                       }
-        session.execute(update(User).where(User.id == user_id).values(user_update))
-        session.commit()
-        return {"message": "user updated"}
-    # if user did not provide a new password update user with the existing one
-    else:
-        user_update = {User.name: user_info.name,
-                       User.email: user_info.email,
-                       User.photo: photo,
-                       User.password: user_to_update.password}
-        session.execute(update(User).where(User.id == user_id).values(user_update))
-        session.commit()
-        return {"message": "user updated"}
+    user_update = {User.name: name,
+                   User.email: email,
+                   User.photo: photo}
+    if user_info.password:
+        user_update[User.password] = get_password_hash(user_info.password)
+    session.execute(update(User).where(User.id == user_id).values(user_update))
+    session.commit()
+    return {"message": "user updated"}
 
 
 # access token endpoints
