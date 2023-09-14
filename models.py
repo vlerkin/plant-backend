@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
 from sqlalchemy import String, ForeignKey, DateTime
@@ -67,7 +67,7 @@ class Plant(Base):
     @property
     def is_healthy(self):
         # todo: compute by PlantDisease data
-        yesterday = datetime.now() - timedelta(days=1)
+        yesterday = datetime.now(timezone.utc) - timedelta(days=1)
         for disease in self.diseases:
             if disease.endDate is None or disease.endDate >= yesterday:
                 return False

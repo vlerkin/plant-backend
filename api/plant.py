@@ -163,7 +163,7 @@ async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing,
 
 @router.post("/my-plants/{plant_id}/plant-disease")
 async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, user: AuthUser = Depends(get_current_user)):
-    if disease_info.startDate > datetime.now(timezone.utc):
+    if disease_info.startDate.astimezone() > datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail='Disease cannot start in the future')
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
     plant_to_update = get_user_plant_by_id(user.id, plant_id)
@@ -206,9 +206,7 @@ async def update_disease_end_date(plant_id: int, update_info: EndDateDiseaseUpda
         raise HTTPException(status_code=404, detail="Disease log not found")
     if disease_log_to_update[1].userId != user.id:
         raise HTTPException(status_code=403, detail="Access denied")
-    print("DATETIME !!!!!!!!!!!!!!!!!!!!!", disease_log_to_update[0].startDate.astimezone())
-    print("DATETIME !!!!!!!!!!!!!!!!!!!!!", update_info.end_date)
-    if disease_log_to_update[0].startDate.astimezone() > update_info.end_date:
+    if disease_log_to_update[0].startDate.astimezone() > update_info.end_date.astimezone():
         raise HTTPException(status_code=400, detail='Disease cannot end before it started')
     log_update = {PlantDisease.endDate: update_info.end_date}
     session.execute(update(PlantDisease).where(PlantDisease.id == update_info.plant_disease_id).values(log_update))
