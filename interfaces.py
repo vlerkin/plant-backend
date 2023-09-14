@@ -93,7 +93,6 @@ class CreateFertilizing(BaseModel):
 class PlantDiseaseCreate(BaseModel):
     diseaseId: int
     startDate: datetime
-    endDate: datetime
     treatment: str | None
 
 
@@ -152,3 +151,8 @@ class TokenDelete(BaseModel):
 
 class ArrayId(BaseModel):
     ids: list[int]
+
+
+class EndDateDiseaseUpdate(BaseModel):
+    end_date: datetime
+    plant_disease_id: int

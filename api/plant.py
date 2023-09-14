@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,7 +8,7 @@ from sqlalchemy.exc import NoResultFound
 from auth import get_current_user
 from config import session
 from interfaces import MyPlants, PlantUpdate, PlantIndividualInfo, CreateFertilizing, PlantDiseaseCreate, ArrayId, \
-    WateringLog, AuthUser
+    WateringLog, AuthUser, EndDateDiseaseUpdate
 from models import Plant, WaterLog, FertilizerLog, PlantDisease, Disease
 from pydantic import ValidationError
 
@@ -163,6 +163,8 @@ async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing,
 
 @router.post("/my-plants/{plant_id}/plant-disease")
 async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, user: AuthUser = Depends(get_current_user)):
+    if disease_info.startDate > datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail='Disease cannot start in the future')
     # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
     plant_to_update = get_user_plant_by_id(user.id, plant_id)
     if not plant_to_update:
@@ -186,7 +188,7 @@ async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, use
         db_new_plant_disease = PlantDisease(plantId=plant_id,
                                             diseaseId=requested_disease.id,
                                             startDate=disease_info.startDate,
-                                            endDate=disease_info.endDate,
+                                            endDate=None,
                                             treatment=disease_info.treatment)
         session.add(db_new_plant_disease)
         session.commit()
@@ -195,7 +197,26 @@ async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, use
         raise HTTPException(status_code=400, detail=str(error))
 
 
+@router.patch("/my-plants/{plant_id}/plant-disease")
+async def update_disease_end_date(plant_id: int, update_info: EndDateDiseaseUpdate, user: AuthUser = Depends(get_current_user)):
+    try:
+        disease_log_to_update = (session.query(PlantDisease, Plant).join(Plant)
+                                 .filter(PlantDisease.id == update_info.plant_disease_id, Plant.id == plant_id).one())
+    except NoResultFound:
+        raise HTTPException(status_code=404, detail="Disease log not found")
+    if disease_log_to_update[1].userId != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    print("DATETIME !!!!!!!!!!!!!!!!!!!!!", disease_log_to_update[0].startDate.astimezone())
+    print("DATETIME !!!!!!!!!!!!!!!!!!!!!", update_info.end_date)
+    if disease_log_to_update[0].startDate.astimezone() > update_info.end_date:
+        raise HTTPException(status_code=400, detail='Disease cannot end before it started')
+    log_update = {PlantDisease.endDate: update_info.end_date}
+    session.execute(update(PlantDisease).where(PlantDisease.id == update_info.plant_disease_id).values(log_update))
+    session.commit()
+    return {"message": "disease end date updated"}
+
+
 @router.get("/all-diseases")
-async def all_diseases():
+async def all_diseases(user: AuthUser = Depends(get_current_user)):
     diseases = session.query(Disease).all()
     return diseases
