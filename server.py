@@ -8,7 +8,8 @@ from api.user import router as user_router
 app = FastAPI()
 origins = [
     "http://localhost:3000",
-    "http://localhost:8000"
+    "http://localhost:8000",
+    "https://plantie-care.klestova.nl"
 ]
 
 app.add_middleware(
