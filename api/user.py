@@ -61,7 +61,7 @@ async def edit_profile(user_info: UserUpdate, user: AuthUser = Depends(get_curre
     if not user_to_update:
         raise HTTPException(status_code=404, detail="User not found")
 
-    photo = user.photo.split('com/')[1]
+    photo = user.photo.split('com/')[1] if user.photo else None
     name = user.name
     email = user.email
     if user_info.photo:
