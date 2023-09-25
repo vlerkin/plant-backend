@@ -11,4 +11,5 @@ COPY ./*.py     /app/
 COPY ./api      /app/api/
 COPY ./services /app/services/
 
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN pip install gunicorn
+CMD ["gunicorn", "server:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000"]
