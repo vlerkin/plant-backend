@@ -1,10 +1,10 @@
 ## Project Description
--- non-tech part --
-PlantieCare project was created as my graduation project at Mind Mingle Bootcamp. It solves several problems my friends and I have as plants owners.
+-- non-tech part --  
+PlantieCare project was created as my graduation project at Mind Mingle Bootcamp. It solves several problems my friends and I have as plants owners.  
 
-Helps to track care of your plants (watering, fertilisers and diseases);
-Gives you opportunity to share your plants with a friend/family member who is planning to take care after them while you are travelling or absent, a caretaker does not need to register, they can simply scan a QR code or use a provided link to gain restricted access to your plants and log watering.
--- tech part --
+1. Helps to track care of your plants (watering, fertilisers and diseases);  
+2. Gives you opportunity to share your plants with a friend/family member who is planning to take care after them while you are travelling or absent, a caretaker does not need to register, they can simply scan a QR code or use a provided link to gain restricted access to your plants and log watering.  
+-- tech part --  
 The app has a responsive design with "mobile first" approach at it's core.  
 Although during the bootcamp we mostly focused on JS technologies in all our projects, for this particular one, I decided to challenge myself by incorporating new technologies I had never used before: FastAPI, SQLAlchemy, Pydantic, AWS S3, and Tailwind. It was a great challenge, to build an entire app from sctratch using several unfamiliar technologies within 2.5 weeks and now I am happy to present the result. For code delivery I used docker containers (also for development), the project is deployed on AWS EC2.
 
