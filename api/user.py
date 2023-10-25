@@ -3,6 +3,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status, Depends
 from marshmallow import ValidationError
+from psycopg2 import OperationalError
 from sqlalchemy import update
 from sqlalchemy.exc import NoResultFound
 
@@ -30,6 +31,9 @@ async def create_new_user(new_user: NewUser):
         return new_user
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 
 # log in a user
@@ -58,27 +62,31 @@ async def show_me(user: AuthUser = Depends(get_current_user)):
 async def edit_profile(user_info: UserUpdate, user: AuthUser = Depends(get_current_user)):
     user_id = user.id
     user_to_update = session.query(User).filter_by(id=user_id).one()
-    if not user_to_update:
-        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        if not user_to_update:
+            raise HTTPException(status_code=404, detail="User not found")
 
-    photo = user.photo.split('com/')[1] if user.photo else None
-    name = user.name
-    email = user.email
-    if user_info.photo:
-        photo = user_info.photo
-    if user_info.email:
-        email = user_info.email
-    if user_info.name:
-        name = user_info.name
+        photo = user.photo.split('com/')[1] if user.photo else None
+        name = user.name
+        email = user.email
+        if user_info.photo:
+            photo = user_info.photo
+        if user_info.email:
+            email = user_info.email
+        if user_info.name:
+            name = user_info.name
 
-    user_update = {User.name: name,
-                   User.email: email,
-                   User.photo: photo}
-    if user_info.password:
-        user_update[User.password] = get_password_hash(user_info.password)
-    session.execute(update(User).where(User.id == user_id).values(user_update))
-    session.commit()
-    return {"message": "user updated"}
+        user_update = {User.name: name,
+                       User.email: email,
+                       User.photo: photo}
+        if user_info.password:
+            user_update[User.password] = get_password_hash(user_info.password)
+        session.execute(update(User).where(User.id == user_id).values(user_update))
+        session.commit()
+        return {"message": "user updated"}
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 
 # access token endpoints
@@ -90,18 +98,22 @@ async def get_all_tokens(user: AuthUser = Depends(get_current_user)):
 
 @router.post("/access-tokens")
 async def create_guest_token(guest_input: GuestInput, user: AuthUser = Depends(get_current_user)):
-    access_token = AccessToken(
-        token=str(uuid.uuid4()),
-        nameToken=guest_input.guest_name,
-        startDate=datetime.now(),
-        endDate=guest_input.end_date,
-        userId=user.id,
-    )
-    session.add(access_token)
-    session.commit()
+    try:
+        access_token = AccessToken(
+            token=str(uuid.uuid4()),
+            nameToken=guest_input.guest_name,
+            startDate=datetime.now(),
+            endDate=guest_input.end_date,
+            userId=user.id,
+        )
+        session.add(access_token)
+        session.commit()
 
-    session.refresh(access_token)
-    return access_token
+        session.refresh(access_token)
+        return access_token
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 
 @router.delete("/access-tokens")
@@ -109,12 +121,14 @@ async def delete_guest_token(token: TokenDelete, user: AuthUser = Depends(get_cu
     try:
         token_to_delete = session.query(
             AccessToken).filter(AccessToken.id == token.token_id, AccessToken.userId == user.id).one()
+        session.delete(token_to_delete)
+        session.commit()
+        return {"message": "Token deleted"}
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Token not found")
-
-    session.delete(token_to_delete)
-    session.commit()
-    return {"message": "Token deleted"}
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 
 @router.get("/access-tokens/authorize/{access_token}")

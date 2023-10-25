@@ -42,6 +42,9 @@ async def create_plant(new_plant: PlantUpdate, user: AuthUser = Depends(get_curr
         return new_plant
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 
 # get a plant's info
@@ -64,45 +67,51 @@ async def get_plant(plant_id: int, user: AuthUser = Depends(get_current_user)):
 # delete a plant
 @router.delete("/my-plants/{plant_id}")
 async def delete_plant(plant_id: int, user: AuthUser = Depends(get_current_user)):
-    plant_to_delete = get_user_plant_by_id(user.id, plant_id)
-    if not plant_to_delete:
-        raise HTTPException(status_code=404, detail="Plant not found")
-    session.delete(plant_to_delete)
-    session.commit()
-    return {"message": "Plant deleted"}
-
+    try:
+        plant_to_delete = get_user_plant_by_id(user.id, plant_id)
+        if not plant_to_delete:
+            raise HTTPException(status_code=404, detail="Plant not found")
+        session.delete(plant_to_delete)
+        session.commit()
+        return {"message": "Plant deleted"}
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 @router.patch("/my-plants/{plant_id}")
 async def update_plant(plant_id: int, plant_info: PlantUpdate, user: AuthUser = Depends(get_current_user)):
-    # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
-    plant_to_update = get_user_plant_by_id(user.id, plant_id)
-    if not plant_to_update:
-        raise HTTPException(status_code=404, detail="Plant not found")
-    location = plant_to_update.location
-    photo = plant_to_update.photo
-    comment = plant_to_update.comment
-    species = plant_to_update.species
-    if plant_info.location:
-        location = plant_info.location
-    if plant_info.photo:
-        photo = plant_info.photo
-    if plant_info.comment:
-        comment = plant_info.comment
-    if plant_info.species:
-        species = plant_info.species
-    plant_update = {Plant.name: plant_info.name,
-                    Plant.howOftenWatering: int(plant_info.howOftenWatering),
-                    Plant.waterVolume: float(plant_info.waterVolume),
-                    Plant.light: plant_info.light,
-                    Plant.location: location,
-                    Plant.photo: photo,
-                    Plant.comment: comment,
-                    Plant.species: species,
-                    Plant.userId: user.id}
-    session.execute(update(Plant).where(Plant.id == plant_id).values(plant_update))
-    session.commit()
-    return {"message": "plant updated"}
-
+    try:
+        # find a plant with the requested id, if it exists, check if this plant belongs to the authorized user
+        plant_to_update = get_user_plant_by_id(user.id, plant_id)
+        if not plant_to_update:
+            raise HTTPException(status_code=404, detail="Plant not found")
+        location = plant_to_update.location
+        photo = plant_to_update.photo
+        comment = plant_to_update.comment
+        species = plant_to_update.species
+        if plant_info.location:
+            location = plant_info.location
+        if plant_info.photo:
+            photo = plant_info.photo
+        if plant_info.comment:
+            comment = plant_info.comment
+        if plant_info.species:
+            species = plant_info.species
+        plant_update = {Plant.name: plant_info.name,
+                        Plant.howOftenWatering: int(plant_info.howOftenWatering),
+                        Plant.waterVolume: float(plant_info.waterVolume),
+                        Plant.light: plant_info.light,
+                        Plant.location: location,
+                        Plant.photo: photo,
+                        Plant.comment: comment,
+                        Plant.species: species,
+                        Plant.userId: user.id}
+        session.execute(update(Plant).where(Plant.id == plant_id).values(plant_update))
+        session.commit()
+        return {"message": "plant updated"}
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 @router.post("/my-plants/{plant_id}/watering", response_model=WateringLog)
 async def create_watering(plant_id: int, user: AuthUser = Depends(get_current_user)):
@@ -120,6 +129,9 @@ async def create_watering(plant_id: int, user: AuthUser = Depends(get_current_us
         return db_new_watering
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 
 @router.post("/my-plants/watering")
@@ -132,15 +144,18 @@ async def water_several_plants(plant_ids: ArrayId, user: AuthUser = Depends(get_
     # or we have an edge case with non-unique ids
     if len(plants) != len(plant_ids.ids):
         raise HTTPException(status_code=400, detail="Bad request")
-
-    for plant in plants:
-        session.add(
-            WaterLog(dateTime=datetime.now(),
-                     waterVolume=plant.waterVolume,
-                     plantId=plant.id)
-        )
-    session.commit()
-    return {"message": "Plants watered"}
+    try:
+        for plant in plants:
+            session.add(
+                WaterLog(dateTime=datetime.now(),
+                         waterVolume=plant.waterVolume,
+                         plantId=plant.id)
+            )
+        session.commit()
+        return {"message": "Plants watered"}
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 
 @router.post("/my-plants/{plant_id}/fertilizing")
@@ -159,6 +174,9 @@ async def create_fertilizing(plant_id: int, fertilizing_info: CreateFertilizing,
         return {"message": "added fertilizing to log"}
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 
 @router.post("/my-plants/{plant_id}/plant-disease")
@@ -195,6 +213,9 @@ async def add_plant_disease(plant_id: int, disease_info: PlantDiseaseCreate, use
         return disease_info
     except ValidationError as error:
         raise HTTPException(status_code=400, detail=str(error))
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 
 @router.patch("/my-plants/{plant_id}/plant-disease")
@@ -204,15 +225,18 @@ async def update_disease_end_date(plant_id: int, update_info: EndDateDiseaseUpda
                                  .filter(PlantDisease.id == update_info.plant_disease_id, Plant.id == plant_id).one())
     except NoResultFound:
         raise HTTPException(status_code=404, detail="Disease log not found")
-    if disease_log_to_update[1].userId != user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
-    if disease_log_to_update[0].startDate.astimezone() > update_info.end_date.astimezone():
-        raise HTTPException(status_code=400, detail='Disease cannot end before it started')
-    log_update = {PlantDisease.endDate: update_info.end_date}
-    session.execute(update(PlantDisease).where(PlantDisease.id == update_info.plant_disease_id).values(log_update))
-    session.commit()
-    return {"message": "disease end date updated"}
-
+    try:
+        if disease_log_to_update[1].userId != user.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        if disease_log_to_update[0].startDate.astimezone() > update_info.end_date.astimezone():
+            raise HTTPException(status_code=400, detail='Disease cannot end before it started')
+        log_update = {PlantDisease.endDate: update_info.end_date}
+        session.execute(update(PlantDisease).where(PlantDisease.id == update_info.plant_disease_id).values(log_update))
+        session.commit()
+        return {"message": "disease end date updated"}
+    finally:
+        if session.in_transaction():
+            session.rollback()
 
 @router.get("/all-diseases")
 async def all_diseases(user: AuthUser = Depends(get_current_user)):
