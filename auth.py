@@ -5,7 +5,7 @@ from fastapi import HTTPException, Depends, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from passlib.context import CryptContext
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import NoResultFound, OperationalError, PendingRollbackError
 
 from config import Configuration, session
 from interfaces import AuthUser
@@ -38,6 +38,9 @@ def get_user(email: str):
         user_to_login = session.query(User).filter_by(email=email).one()
     except NoResultFound:
         return None
+    except (OperationalError, PendingRollbackError):
+        session.rollback()
+        return get_user(email)
 
     return user_to_login
 
