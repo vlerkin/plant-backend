@@ -6,7 +6,6 @@ on:
 
 env:
   REGISTRY: hub.docker.com
-  DOCKER_REPOSITORY: ${{ secrets.DOCKER_REPOSITORY }}
   CONTAINER_NAME: ${{ secrets.DOCKER_BACKEND_IMAGE }}
 
 permissions:
@@ -22,22 +21,23 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Log into registry ${{ env.REGISTRY }}
-      uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+    - name: Log in to Docker Hub
+      uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
       with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.DOCKER_HUB_USER }}
-          password: ${{ secrets.DOCKER_HUB_PASS }}
+        username: ${{ secrets.DOCKER_HUB_USER }}
+        password: ${{ secrets.DOCKER_HUB_PASS }}
 
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
-      env:
-        REPOSITORY: ${{ env.DOCKER_REPOSITORY }}
-        IMAGE_TAG: ${{ env.CONTAINER_NAME }}-${{ github.sha }}
-      run: |
-        # Build a docker container and
-        # push it to ECR so that it can
-        # be deployed to ECS.
-        docker build -t $REPOSITORY:$IMAGE_TAG .
-        docker push $REPOSITORY:$IMAGE_TAG
-        echo "image=$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+      with:
+        images: ${{ secrets.DOCKER_REPOSITORY }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
